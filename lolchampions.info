@@ -1,0 +1,6 @@
+name = League Of Legends - Champions
+description = Create a vocabulary based in the champions and create a blocks: Rotation Champions. Based Riot Games - League of Legends API
+core = 7.x
+package = League Of Legends
+dependencies[] = libraries
+configure = "admin/config/LeagueOfLegends"

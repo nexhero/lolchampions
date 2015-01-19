@@ -1,0 +1,86 @@
+<?php
+/**
+ * Implements hook_requirements().
+ */
+
+function lolchampions_requirements($phase) {
+  $requirements=array();
+  $t= get_t();
+  if ($phase == 'install') {
+    $library = libraries_detect('phpriotapi');
+    if ($library['installed']==false) {
+      $requirements['lolchampions'] = array(
+        'title' => $t('LoL Champions'),
+        'description' => $t('LoL Champions module need lolriotapi.'),
+        'severity' => REQUIREMENT_ERROR,
+       );
+    }
+  }
+  return $requirements;
+}
+
+/**
+ * Implements hook_install().
+ */
+function lolchampions_install() {
+  variable_set('lolserver', 'lan');
+  variable_set('ddragon', '5.1.1');
+  $vocabulary = new stdClass();
+  $vocabulary->name = 'LoL Champions';
+  $vocabulary->machine_name = 'lolchampions';
+  taxonomy_vocabulary_save($vocabulary);
+  $vid = $vocabulary->vid;
+  variable_set('taxonomy_champion', $vid);
+
+/**
+ * Field Champion ID to make a relation with Riot API
+ *
+ */
+  $field = array(
+    'field_name' => 'champion_id',
+    'type' => 'text',
+  );
+  field_create_field($field);
+
+
+/**
+   * Bind field to a entity bundle.
+   */
+  $instance = array(
+    'field_name' => 'champion_id',
+    'entity_type' => 'taxonomy_term',
+    'bundle' => 'lolchampions',
+  );
+  field_create_instance($instance);
+
+/**
+ * Adding all champions to vocabulary. GG EASY
+ */
+  $library = libraries_load('phpriotapi');
+  $riotapi = new riotapi(variable_get('lolserver', 'lan'));
+  $r = $riotapi->getStatic('champion');
+  $champions=$r['data'];
+  foreach ($champions as $name => $value) {
+    $term=new stdClass();
+    $term->name=$name;
+    $term->path['alias']='champion/'.$value['key'];
+    $term->champion_id['und'][0]['value']=$value['id'];
+    $term->vid=$vid;
+    taxonomy_term_save($term);
+  }
+
+}
+/**
+ *
+ * @details [Delete all data from Drupal Data base]
+ *
+ */
+function lolcountryrank_uninstall() {
+  $vid=variable_get('taxonomy_champion', 0);
+  if ($vid!=0) {
+    taxonomy_vocabulary_delete($vid);
+  }
+  field_delete_field('champion_id');
+
+}
+

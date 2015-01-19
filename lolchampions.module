@@ -1,0 +1,103 @@
+<?php
+/**
+ * Implements hook_permission().
+ */
+function lolchampions_permission() {
+  return array(
+    'administer LoL'=>array(
+      'title' =>t('Configure League Of Legends') ,
+      'description' =>t('Set default server and version of ddragon data') ,
+       )
+    );
+}
+/**
+ * Implements hook_menu().
+ */
+function lolchampions_menu() {
+  $items = array();
+  $items['admin/config/LeagueOfLegeds'] = array(
+    'title' => 'League Of Legends Configuration',
+    'page callback' => 'drupal_get_form',
+    'page arguments'=> array('lol_admin_config'),
+    'access arguments' => array('administer LoL'),
+  );
+  return $items;
+}
+
+function lol_admin_config(){
+  $form['ddragon'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Version of dDragon Data'),
+    '#size' => 25,
+    '#maxlength' => 128,
+    '#required' => TRUE,
+    '#description' => t('Version ddragon.'),
+    '#default_value' => variable_get('ddragon', '5.1.1'),
+
+  );
+  $form['lolserver'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Server'),
+    '#size' => 25,
+    '#maxlength' => 4,
+    '#required' => TRUE,
+    '#description' => t('Write your default server.'),
+    '#default_value' => variable_get('lolserver', 'lan'),
+
+  );
+return system_settings_form($form);;
+}
+/**
+ * Implements hook_block_info().
+ */
+function lolchampions_block_info() {
+  $blocks=array();
+  $blocks['champions_rotation']=array(
+    'info' =>t('Champions Rotation') ,
+  );
+  return $blocks;
+}
+/**
+ * Implements hook_block_view().
+ */
+function lolchampions_block_view($delta = '') {
+  $block=array();
+  switch ($delta) {
+    case 'champions_rotation':
+      $block['subject']='League Of Legends Rotation';
+      $block['content']=_lolchampions_block_rotation_content();
+      break;
+  }
+  return $block;
+}
+
+function _lolchampions_block_rotation_content(){
+  $library = libraries_load('phpriotapi');
+  $riotapi = new riotapi(variable_get('lolserver', 'lan'));
+  $output='';
+
+  $r = $riotapi->getChampion(true);
+  $champions=$r['champions'];
+  foreach ($champions as $key => $value) {
+    $champion=$riotapi->getStatic('champion',$value['id']);
+
+    $output=$output.t('<a href="@url"><img src="http://ddragon.leagueoflegends.com/cdn/'.variable_get('ddragon', '5.1.1').'/img/champion/'.$champion['key'].'.png" alt="" height="42" width="42"></a>', array('@url' => url('champion/'.$champion['key'])));;
+  }
+   return $output;
+}
+
+
+
+
+/**
+ * Implements hook_theme().
+ */
+function lolchampions_theme($existing, $type, $theme, $path) {
+  return array(
+    'taxonomy_term__lolchampions' => array(
+      'render element' => 'elements',
+      'template' => 'taxonomy-term--lolchampions',
+    ),
+  );
+}
+
